@@ -1,4 +1,4 @@
-# Two手交易平台
+ # 二手交易平台（我的期末作业，没什么功能的，如果有需要可以拉走）
 
 Two手交易平台是一个现代化的二手物品交易网站，为用户提供便捷的二手物品买卖服务。
 
@@ -87,7 +87,7 @@ pip install -r requirements.txt
 
 3. 启动服务器
 ```bash
-python run.py
+python main.py
 ```
 
 ### 创建管理员账户
@@ -134,6 +134,7 @@ python create_admin.py
 - 密码：admin123
 
 **注意：** 创建后请立即修改默认密码！
+
 
 ## 环境要求
 
@@ -188,4 +189,4 @@ SECRET_KEY = 'your-secret-key'
 
 ## 许可证
 
-本项目采用 MIT 许可证 
+本项目采用 MIT 许可证
