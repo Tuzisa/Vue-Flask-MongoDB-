@@ -248,8 +248,18 @@ export const itemApi = {
   },
   
   // 更新商品
-  updateItem(id, itemData) {
-    return axios.put(`/api/items/${id}`, itemData);
+  updateItem(itemId, itemData) {
+    // 检查是否是FormData类型
+    if (itemData instanceof FormData) {
+      return axios.put(`/api/items/${itemId}`, itemData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    } else {
+      // 如果是普通对象，使用JSON格式
+      return axios.put(`/api/items/${itemId}`, itemData);
+    }
   },
   
   // 删除商品

@@ -209,21 +209,11 @@ const submitItem = async () => {
       
       // 添加新图片文件
       if (newImages.length > 0) {
-        // 创建一个新的 images 数组
-        const imagesArray = [];
-        
-        // 添加每个新图片文件
         newImages.forEach((image, index) => {
           if (image.file) {
-            // 使用一个唯一的key来标识每个图片
-            const key = `image_${index}`;
-            formData.append(key, image.file);
-            imagesArray.push(key);
+            formData.append('images', image.file);
           }
         });
-        
-        // 添加图片键数组到formData
-        formData.append('image_keys', JSON.stringify(imagesArray));
       }
     } else {
       // 如果没有任何图片，在编辑模式下需要清除所有原有图片
@@ -284,7 +274,6 @@ const submitItem = async () => {
       
       ElMessage.error(errorMsg);
     } else if (error.message) {
-      // 显示错误消息文本
       ElMessage.error(error.message);
     } else {
       ElMessage.error(`${isEditMode.value ? '更新' : '发布'}失败，服务器无响应`);

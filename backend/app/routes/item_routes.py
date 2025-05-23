@@ -27,105 +27,72 @@ def allowed_file(filename):
 @jwt_required()
 def create_item():
     """创建新商品"""
-    current_user_id = get_jwt_identity()
-    user = User.objects(id=current_user_id).first()
-    
-    if not user:
-        return jsonify({"msg": "User not found"}), 404
-    
-    # 检查内容类型
-    content_type = request.content_type or ''
-    
-    # 处理JSON请求
-    if 'application/json' in content_type:
-        data = request.get_json()
-        if not data:
-            return jsonify({"msg": "Missing JSON in request"}), 400
+    try:
+        # 获取当前用户
+        user_id = get_jwt_identity()
+        user = User.objects.get(id=user_id)
         
-        # 检查必填字段
-        required_fields = ['title', 'description', 'price', 'category']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"msg": f"Missing {field}"}), 400
+        # 获取请求的Content-Type
+        content_type = request.headers.get('Content-Type', '')
         
-        try:
-            # 创建新商品
-            new_item = Item(
-                title=data.get('title'),
-                description=data.get('description'),
-                price=float(data.get('price')),
-                category=data.get('category'),
-                seller=user,
-                images=data.get('images', [])
-            )
-            new_item.save()
+        # 处理multipart/form-data请求
+        if 'multipart/form-data' in content_type:
+            try:
+                # 获取表单数据
+                title = request.form.get('title')
+                description = request.form.get('description')
+                price = request.form.get('price')
+                category = request.form.get('category')
+                
+                # 检查必填字段
+                if not all([title, description, price, category]):
+                    return jsonify({"msg": "Missing required fields"}), 400
+                
+                # 处理图片上传
+                image_paths = []
+                if 'images' in request.files:
+                    files = request.files.getlist('images')
+                    for file in files:
+                        if file and allowed_file(file.filename):
+                            # 生成安全的文件名
+                            filename = secure_filename(file.filename)
+                            # 添加UUID前缀避免文件名冲突
+                            unique_filename = f"{uuid.uuid4()}_{filename}"
+                            file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+                            
+                            # 保存文件
+                            file.save(file_path)
+                            
+                            # 存储相对路径
+                            relative_path = f"/static/uploads/{unique_filename}"
+                            image_paths.append(relative_path)
+                
+                # 创建新商品
+                new_item = Item(
+                    title=title,
+                    description=description,
+                    price=float(price),
+                    category=category,
+                    seller=user,
+                    images=image_paths
+                )
+                new_item.save()
+                
+                return jsonify({
+                    "msg": "Item created successfully",
+                    "item_id": str(new_item.id),
+                    "images": image_paths
+                }), 201
+                
+            except Exception as e:
+                print(f"Error creating item: {e}")
+                return jsonify({"msg": "Error processing form data"}), 400
+        else:
+            return jsonify({"msg": "Unsupported media type"}), 415
             
-            return jsonify({
-                "msg": "Item created successfully",
-                "item_id": str(new_item.id)
-            }), 201
-        except ValidationError as e:
-            return jsonify({"msg": "Validation error", "errors": str(e)}), 400
-        except Exception as e:
-            print(f"Error creating item: {e}")
-            return jsonify({"msg": "An internal error occurred"}), 500
-    
-    # 处理multipart/form-data请求
-    elif 'multipart/form-data' in content_type:
-        try:
-            # 获取表单数据
-            title = request.form.get('title')
-            description = request.form.get('description')
-            price = request.form.get('price')
-            category = request.form.get('category')
-            
-            # 检查必填字段
-            if not all([title, description, price, category]):
-                return jsonify({"msg": "Missing required fields"}), 400
-            
-            # 处理图片上传
-            image_paths = []
-            if 'images' in request.files:
-                files = request.files.getlist('images')
-                for file in files:
-                    if file and allowed_file(file.filename):
-                        # 生成安全的文件名
-                        filename = secure_filename(file.filename)
-                        # 添加UUID前缀避免文件名冲突
-                        unique_filename = f"{uuid.uuid4()}_{filename}"
-                        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-                        
-                        # 保存文件
-                        file.save(file_path)
-                        
-                        # 存储相对路径
-                        relative_path = f"/static/uploads/{unique_filename}"
-                        image_paths.append(relative_path)
-            
-            # 创建新商品
-            new_item = Item(
-                title=title,
-                description=description,
-                price=float(price),
-                category=category,
-                seller=user,
-                images=image_paths
-            )
-            new_item.save()
-            
-            return jsonify({
-                "msg": "Item created successfully",
-                "item_id": str(new_item.id),
-                "images": image_paths
-            }), 201
-        except ValidationError as e:
-            return jsonify({"msg": "Validation error", "errors": str(e)}), 400
-        except Exception as e:
-            print(f"Error creating item with form data: {e}")
-            return jsonify({"msg": "An internal error occurred"}), 500
-    
-    else:
-        return jsonify({"msg": "Unsupported media type"}), 415
+    except Exception as e:
+        print(f"Error creating item: {e}")
+        return jsonify({"msg": "An error occurred while creating the item"}), 500
 
 @item_bp.route('', methods=['GET'])
 def get_items():
@@ -291,43 +258,23 @@ def get_item(item_id):
 @jwt_required()
 def update_item(item_id):
     """更新商品信息"""
-    current_user_id = get_jwt_identity()
-    
     try:
-        item = Item.objects(id=item_id).first()
+        # 获取当前用户
+        user_id = get_jwt_identity()
+        user = User.objects.get(id=user_id)
         
-        if not item:
-            return jsonify({"msg": "Item not found"}), 404
+        # 获取商品
+        item = Item.objects.get(id=item_id)
         
-        # 检查是否是商品卖家
-        if str(item.seller.id) != current_user_id:
-            return jsonify({"msg": "Unauthorized: You are not the seller of this item"}), 403
-        
-        # 检查内容类型
-        content_type = request.content_type or ''
-        
-        # 处理JSON请求
-        if 'application/json' in content_type:
-            data = request.get_json()
-            if not data:
-                return jsonify({"msg": "Missing JSON in request"}), 400
+        # 检查权限
+        if str(item.seller.id) != user_id and not user.is_admin:
+            return jsonify({"msg": "Unauthorized"}), 403
             
-            # 更新允许的字段
-            if 'title' in data:
-                item.title = data['title']
-            if 'description' in data:
-                item.description = data['description']
-            if 'price' in data:
-                item.price = float(data['price'])
-            if 'category' in data:
-                item.category = data['category']
-            if 'images' in data:
-                item.images = data['images']
-            if 'status' in data and data['status'] in ['available', 'reserved', 'sold']:
-                item.status = data['status']
+        # 获取请求的Content-Type
+        content_type = request.headers.get('Content-Type', '')
         
         # 处理multipart/form-data请求
-        elif 'multipart/form-data' in content_type:
+        if 'multipart/form-data' in content_type:
             # 获取表单数据
             if 'title' in request.form:
                 item.title = request.form.get('title')
@@ -337,8 +284,6 @@ def update_item(item_id):
                 item.price = float(request.form.get('price'))
             if 'category' in request.form:
                 item.category = request.form.get('category')
-            if 'status' in request.form and request.form.get('status') in ['available', 'reserved', 'sold']:
-                item.status = request.form.get('status')
             
             # 处理已有图片
             existing_images = []
@@ -368,33 +313,32 @@ def update_item(item_id):
                         new_image_paths.append(relative_path)
             
             # 合并现有图片和新上传的图片
-            # 注意：如果前端传递了existing_images，则使用前端提供的现有图片列表
-            # 否则保留原有的图片
-            if existing_images:
+            if existing_images is not None:
                 # 过滤出真正的服务器路径
                 server_paths = [path for path in existing_images if path.startswith('/static/')]
                 item.images = server_paths + new_image_paths
             else:
                 # 如果没有提供existing_images，则将新图片添加到现有图片中
                 item.images = item.images + new_image_paths
-        
+            
+            # 更新时间戳
+            item.update_timestamp()
+            item.save()
+            
+            return jsonify({
+                "msg": "Item updated successfully",
+                "item_id": str(item.id),
+                "images": item.images
+            }), 200
+            
         else:
             return jsonify({"msg": "Unsupported media type"}), 415
-        
-        # 更新时间戳
-        item.update_timestamp()
-        item.save()
-        
-        return jsonify({
-            "msg": "Item updated successfully",
-            "item_id": str(item.id),
-            "images": item.images
-        }), 200
-    except ValidationError as e:
-        return jsonify({"msg": "Validation error", "errors": str(e)}), 400
+            
+    except DoesNotExist:
+        return jsonify({"msg": "Item not found"}), 404
     except Exception as e:
         print(f"Error updating item: {e}")
-        return jsonify({"msg": "An internal error occurred"}), 500
+        return jsonify({"msg": "An error occurred while updating the item"}), 500
 
 @item_bp.route('/<item_id>', methods=['DELETE'])
 @jwt_required()
