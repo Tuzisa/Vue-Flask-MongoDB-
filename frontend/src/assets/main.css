@@ -1,0 +1,42 @@
+/* 全局 CSS 样式 */
+/* 你可以在这里定义项目的全局样式，或者引入 SCSS/Tailwind */
+
+/* 例如，定义粉色系主题变量 (如果使用 CSS 变量) */
+:root {
+  --primary-color: #f77ca2; /* 主色调 */
+  --primary-color-hover: #e06295; /* 主色调 Hover */
+  --background-color-light: #fef0f0; /* 淡粉色背景 */
+  --card-background-color: #ffffff; /* 卡片背景色 */
+  --text-color: #333333;
+  --border-radius-large: 12px; /* 大圆角 */
+  --box-shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1); /* 卡片阴影 */
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; /* 更圆润的中文字体 */
+  background-color: var(--background-color-light);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+/* 统一样式示例 */
+.button-pink {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius-large);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.button-pink:hover {
+  background-color: var(--primary-color-hover);
+}
+
+.card-pink {
+  background-color: var(--card-background-color);
+  border-radius: var(--border-radius-large);
+  box-shadow: var(--box-shadow-card);
+  padding: 20px;
+} 

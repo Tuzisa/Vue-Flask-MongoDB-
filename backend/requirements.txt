@@ -1,0 +1,11 @@
+Flask==2.2.5
+Flask-RESTful
+Flask-MongoEngine
+Flask-JWT-Extended
+Flask-SocketIO
+Werkzeug
+python-dotenv
+gunicorn
+eventlet
+pymongo
+redis 
